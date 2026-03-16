@@ -8,22 +8,24 @@ export class StartPageEngine implements SearchEngine {
 
   async search(query: string): Promise<SearchResult[]> {
     try {
-      const url = `https://www.startpage.com/do/search?query=${encodeURIComponent(query)}&cat=web&pl=ext-ff&extVersion=1.3.0`;
+      const url = `https://www.startpage.com/do/search?query=${encodeURIComponent(query)}&cat=web&pl=ext-ff&extVersion=1.3.0&with_date=y`;
       const response = await axios.get(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           'Accept-Language': 'tr-TR,tr;q=0.9,en;q=0.8',
           'Accept-Encoding': 'gzip, deflate',
-          'Connection': 'keep-alive'
+          'Connection': 'keep-alive',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         },
-        timeout: 5000
+        timeout: 12000
       });
 
       const $ = cheerio.load(response.data);
       const results: SearchResult[] = [];
 
-      // Try different selectors for StartPage results
+      // Enhanced selectors for StartPage results
       const selectors = [
         '.w-gl__result',
         '.w-gl__result[data-ns="web"]',
@@ -31,19 +33,23 @@ export class StartPageEngine implements SearchEngine {
         '.result',
         '.web-result',
         'div[class*="result"]',
-        'article[data-ns="web"]'
+        'article[data-ns="web"]',
+        '.w-gl'
       ];
 
       for (const selector of selectors) {
         $(selector).each((index: number, element: any) => {
-          if (results.length >= 25) return false;
+          if (results.length >= 50) return false;
           
           const $result = $(element);
           const titleElement = $result.find('h3 a, .w-gl__result-title a, a[href*="http"]').first();
           const title = cleanHtml(titleElement.text());
           const rawUrl = titleElement.attr('href');
           const url = cleanUrl(rawUrl);
-          const snippet = cleanHtml($result.find('.w-gl__description, .description, .snippet, p').first().text());
+          
+          // Try multiple snippet selectors
+          const snippetElement = $result.find('.w-gl__description, .description, .snippet, p').first();
+          const snippet = cleanHtml(snippetElement.text());
 
           if (validateResult(title, url, snippet)) {
             results.push({
@@ -59,7 +65,7 @@ export class StartPageEngine implements SearchEngine {
         if (results.length > 0) break;
       }
 
-      return results.slice(0, 25);
+      return results.slice(0, 50);
     } catch (error) {
       console.error(`StartPage search error:`, error);
       return [];

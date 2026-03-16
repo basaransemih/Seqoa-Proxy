@@ -1,7 +1,6 @@
 import { SearchEngine, SearchResult, NewsResult, VideoResult, ImageResult } from './types';
 import { DuckDuckGoEngine } from './engines/duckduckgo';
 import { BraveEngine } from './engines/brave';
-import { StartPageEngine } from './engines/startpage';
 import { QwantEngine } from './engines/qwant';
 import { MojeekEngine } from './engines/mojeek';
 import { AskEngine } from './engines/ask';
@@ -11,7 +10,6 @@ export class MetaSearch {
   private engines: SearchEngine[] = [
     new DuckDuckGoEngine(),
     new BraveEngine(),
-    new StartPageEngine(),
     new QwantEngine(),
     new MojeekEngine(),
     new AskEngine(),
@@ -33,7 +31,7 @@ export class MetaSearch {
         const results = await Promise.race([
           engine.search(query),
           new Promise<SearchResult[]>((resolve) => 
-            setTimeout(() => resolve([]), 8000)
+            setTimeout(() => resolve([]), 12000)
           )
         ]);
         return { engine: engine.name, results };
@@ -116,7 +114,7 @@ export class MetaSearch {
         const results = await Promise.race([
           engine.search(query),
           new Promise<SearchResult[]>((resolve) => 
-            setTimeout(() => resolve([]), 8000)
+            setTimeout(() => resolve([]), 12000)
           )
         ]);
         return { engine: engine.name, results };
