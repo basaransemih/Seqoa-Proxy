@@ -1,13 +1,13 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { SearchEngine, SearchResult } from '../types';
+import { SearchEngine, SearchResult, ImageResult } from '../../types';
 
-export class QwantEngine implements SearchEngine {
-  name = 'Qwant';
+export class QwantImagesEngine implements SearchEngine {
+  name = 'Qwant Images';
 
   async search(query: string): Promise<SearchResult[]> {
     try {
-      const response = await axios.get(`https://www.qwant.com/?q=${encodeURIComponent(query)}&t=web`, {
+      const response = await axios.get(`https://www.qwant.com/?q=${encodeURIComponent(query)}&t=images`, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -21,7 +21,7 @@ export class QwantEngine implements SearchEngine {
       const $ = cheerio.load(response.data);
       const results: SearchResult[] = [];
 
-      // Try to find JSON data embedded in script tags first
+      // Try to extract JSON data from script tags first
       const scriptTags = $('script').toArray();
       for (const script of scriptTags) {
         const scriptContent = $(script).html();
@@ -30,8 +30,8 @@ export class QwantEngine implements SearchEngine {
             const jsonMatch = scriptContent.match(/window\.__INITIAL_STATE__\s*=\s*({.*?});/s);
             if (jsonMatch) {
               const jsonData = JSON.parse(jsonMatch[1]);
-              const qwantResults = this.extractFromJSON(jsonData);
-              results.push(...qwantResults);
+              const imageResults = this.extractImagesFromJSON(jsonData);
+              results.push(...imageResults);
             }
           } catch (e) {
             // Continue with HTML parsing if JSON extraction fails
@@ -41,16 +41,17 @@ export class QwantEngine implements SearchEngine {
 
       // Fallback to HTML parsing
       if (results.length === 0) {
-        $('.result, .web-result, .search-result').each((index: number, element: any) => {
+        $('.images-result, .image-result, .result').each((index: number, element: any) => {
           const $result = $(element);
-          const title = $result.find('h3 a, .title a, h2 a').text().trim();
-          const url = $result.find('h3 a, .title a, h2 a').attr('href');
-          const snippet = $result.find('.description, .snippet, .url').text().trim();
+          const title = $result.find('img').attr('alt') || $result.find('.title').text().trim();
+          const url = $result.find('a').attr('href') || $result.find('img').attr('src');
+          const snippet = `Image: ${title}`;
 
-          if (title && url && snippet && url.startsWith('http')) {
+          if (url && title) {
+            const finalUrl = url.startsWith('http') ? url : `https://www.qwant.com${url}`;
             results.push({
               title,
-              url,
+              url: finalUrl,
               snippet,
               engine: this.name,
               position: results.length + 1
@@ -61,25 +62,25 @@ export class QwantEngine implements SearchEngine {
 
       return results.slice(0, 10);
     } catch (error) {
-      console.error(`Qwant search error:`, error);
+      console.error(`Qwant Images search error:`, error);
       return [];
     }
   }
 
-  private extractFromJSON(jsonData: any): SearchResult[] {
+  private extractImagesFromJSON(jsonData: any): SearchResult[] {
     const results: SearchResult[] = [];
     
     try {
-      // Navigate through Qwant's JSON structure
-      if (jsonData && jsonData.web && jsonData.web.results) {
-        const webResults = jsonData.web.results;
+      // Navigate through Qwant's JSON structure for images
+      if (jsonData && jsonData.images && jsonData.images.results) {
+        const imageResults = jsonData.images.results;
         
-        webResults.forEach((item: any, index: number) => {
-          if (item.title && item.url && item.desc) {
+        imageResults.forEach((item: any, index: number) => {
+          if (item.title && item.media) {
             results.push({
               title: item.title,
-              url: item.url,
-              snippet: item.desc,
+              url: item.media,
+              snippet: `Width: ${item.width || 'Unknown'} | Height: ${item.height || 'Unknown'}`,
               engine: this.name,
               position: index + 1
             });

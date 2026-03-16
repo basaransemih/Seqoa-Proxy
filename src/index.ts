@@ -4,15 +4,18 @@ import helmet from 'helmet';
 import compression from 'compression';
 import { MetaSearch } from './meta-search';
 import { SearchResponse } from './types';
+import { StatusService } from './services/status-service';
 
 const app = express();
 const port = process.env.PORT || 3000;
 const metaSearch = new MetaSearch();
+const statusService = new StatusService();
 
 app.use(helmet());
 app.use(cors());
 app.use(compression());
 app.use(express.json());
+app.use(express.static('public'));
 
 app.get('/api/search', async (req, res) => {
   const startTime = Date.now();
@@ -82,6 +85,59 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+app.get('/api/status', async (req, res) => {
+  try {
+    const systemStatus = await statusService.getSystemStatus();
+    res.json({
+      ...systemStatus,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Status error:', error);
+    res.status(500).json({
+      error: 'Failed to get system status',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get('/api/status/:engine', async (req, res) => {
+  try {
+    const { engine } = req.params;
+    const engineStatus = await statusService.checkEngineHealth(engine);
+    res.json({
+      ...engineStatus,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Engine status error:', error);
+    res.status(500).json({
+      error: 'Failed to get engine status',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get('/api/status/:engine/history', (req, res) => {
+  try {
+    const { engine } = req.params;
+    const { limit = 50 } = req.query;
+    const history = statusService.getEngineHistory(engine, parseInt(limit as string));
+    res.json({
+      engine,
+      history,
+      count: history.length,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Engine history error:', error);
+    res.status(500).json({
+      error: 'Failed to get engine history',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 app.get('/', (req, res) => {
   res.json({
     name: 'Seqoa Meta Proxy',
@@ -90,12 +146,22 @@ app.get('/', (req, res) => {
     endpoints: {
       '/api/search': 'Search across multiple engines',
       '/api/engines': 'List available search engines',
-      '/api/health': 'Health check'
+      '/api/health': 'Health check',
+      '/api/status': 'System status dashboard',
+      '/api/status/:engine': 'Individual engine status',
+      '/api/status/:engine/history': 'Engine status history'
+    },
+    pages: {
+      '/status.html': 'Status dashboard UI',
+      '/': 'API documentation'
     },
     usage: {
       search: '/api/search?q=your+query',
-      selective: '/api/search?q=your+query&engines=Google,DuckDuckGo',
-      limited: '/api/search?q=your+query&limit=20'
+      selective: '/api/search?q=your+query&engines=Brave%20Search,DuckDuckGo%20HTML',
+      limited: '/api/search?q=your+query&limit=20',
+      status: '/api/status',
+      engineStatus: '/api/status/Brave%20Search',
+      dashboard: '/status.html'
     }
   });
 });
@@ -104,6 +170,8 @@ app.listen(port, () => {
   console.log(`🚀 Seqoa Meta Proxy running on port ${port}`);
   console.log(`📊 Available engines: ${metaSearch.getAvailableEngines().join(', ')}`);
   console.log(`🔗 Health check: http://localhost:${port}/api/health`);
+  console.log(`📈 Status dashboard: http://localhost:${port}/status.html`);
+  console.log(`📖 API docs: http://localhost:${port}/`);
 });
 
 export default app;

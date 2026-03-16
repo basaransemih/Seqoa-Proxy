@@ -1,15 +1,33 @@
 # Seqoa Meta Proxy
 
-Fast and simple TypeScript meta search proxy that scrapes data from multiple search engines.
+Fast and simple TypeScript meta search proxy that scrapes data from multiple independent search engines.
 
 ## Features
 
-- **Multiple Search Engines**: DuckDuckGo, Google, Yahoo, Brave, Startpage, Qwant, Ecosia, Mojeek, Ask, Marginalia
+- **8 Independent Search Engines**: Brave Search, DuckDuckGo HTML, Mojeek, Marginalia, Qwant, Yep.com, Gigablast, SearXNG
+- **Specialized Search**: News (Google News RSS), Videos (Invidious/YouTube), Images (Qwant Images)
 - **Fast Performance**: Parallel requests with timeout protection
 - **Deduplication**: Smart duplicate removal and result ranking
 - **RESTful API**: Clean `/api/search` endpoint
 - **TypeScript**: Full type safety
 - **Lightweight**: Minimal dependencies, fast startup
+
+## Search Engines
+
+### Main Web Search
+1. **Brave Search** - Bağımsız İndeks: Google/Bing bağımlılığı yok, sonuçlar çok güncel
+2. **DuckDuckGo HTML** - Karışık (Apple/Kendi): JavaScript'siz, kazıması çok kolay
+3. **Mojeek** - Bağımsız İndeks: Gerçekten tarafsız ve reklam odaklı olmayan temiz sonuçlar
+4. **Marginalia** - Bağımsız (Small Web): SEO çöplüğünden uzak, blog ve kişisel site odaklı
+5. **Qwant** - Bağımsız / Bing Hibrit: Avrupa merkezli, gizlilik odaklı
+6. **Yep.com** - Bağımsız (Ahrefs): Backlink devinin motoru, teknik verisi çok güçlü
+7. **Gigablast** - Bağımsız İndeks: Çok eski ve stabil, bot engeli düşük
+8. **SearXNG** - Çoklu (70+ Kaynak): Tek istekle Google, Wikipedia ve Brave sonuçları
+
+### Specialized Search
+- **Google News RSS** - Haberler için XML formatında hızlı erişim
+- **Invidious** - YouTube videoları için API alternatifi
+- **Qwant Images** - Görsel arama için JSON tabanlı hızlı sonuçlar
 
 ## Quick Start
 
@@ -38,7 +56,7 @@ GET /api/search?q=your+query
 
 ### Search specific engines
 ```
-GET /api/search?q=your+query&engines=Google,DuckDuckGo,Brave
+GET /api/search?q=your+query&engines=Brave%20Search,DuckDuckGo%20HTML,Mojeek
 ```
 
 ### Limit results
@@ -78,16 +96,20 @@ GET /api/health
 
 ## Available Engines
 
-- DuckDuckGo
-- Google
-- Yahoo
-- Brave
-- Startpage
-- Qwant
-- Ecosia
+### Main Web Search
+- Brave Search
+- DuckDuckGo HTML
 - Mojeek
-- Ask
 - Marginalia
+- Qwant
+- Yep.com
+- Gigablast
+- SearXNG
+
+### Specialized Search
+- Google News RSS (News)
+- Invidious (Videos/YouTube)
+- Qwant Images (Images)
 
 ## Environment Variables
 

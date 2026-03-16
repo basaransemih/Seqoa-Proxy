@@ -6,6 +6,24 @@ export interface SearchResult {
   position: number;
 }
 
+export interface NewsResult extends SearchResult {
+  pubDate?: string;
+  source?: string;
+}
+
+export interface VideoResult extends SearchResult {
+  duration?: string;
+  thumbnail?: string;
+  views?: string;
+}
+
+export interface ImageResult extends SearchResult {
+  width?: number;
+  height?: number;
+  source_url?: string;
+  thumbnail?: string;
+}
+
 export interface SearchResponse {
   query: string;
   results: SearchResult[];
