@@ -7,12 +7,12 @@ export class BraveEngine implements SearchEngine {
 
   async search(query: string): Promise<SearchResult[]> {
     try {
-      const url = `https://search.brave.com/search?q=${encodeURIComponent(query)}`;
+      const url = `https://search.brave.com/search?q=${encodeURIComponent(query)}&hl=tr&gl=TR`;
       const response = await axios.get(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Language': 'tr-TR,tr;q=0.9,en;q=0.8',
           'Accept-Encoding': 'gzip, deflate',
           'Connection': 'keep-alive',
           'Upgrade-Insecure-Requests': '1'
@@ -23,22 +23,33 @@ export class BraveEngine implements SearchEngine {
       const $ = cheerio.load(response.data);
       const results: SearchResult[] = [];
 
-      $('.web-result, .result').each((index: number, element: any) => {
-        const $result = $(element);
-        const title = $result.find('h3 a, .title a').text().trim();
-        const url = $result.find('h3 a, .title a').attr('href');
-        const snippet = $result.find('.description, .snippet').text().trim();
+      // Try different selectors for Brave results
+      const selectors = [
+        '.web-result',
+        '.result', 
+        '[data-testid="web-result"]',
+        '.snippet',
+        'div[class*="result"]'
+      ];
 
-        if (title && url && snippet && url.startsWith('http')) {
-          results.push({
-            title,
-            url,
-            snippet,
-            engine: this.name,
-            position: results.length + 1
-          });
-        }
-      });
+      for (const selector of selectors) {
+        $(selector).each((index: number, element: any) => {
+          const $result = $(element);
+          const title = $result.find('h3 a, .title a, a[href*="http"]').first().text().trim();
+          const url = $result.find('h3 a, .title a, a[href*="http"]').first().attr('href');
+          const snippet = $result.find('.description, .snippet, .web-snippet, p').first().text().trim();
+
+          if (title && url && snippet && url.startsWith('http')) {
+            results.push({
+              title,
+              url,
+              snippet,
+              engine: this.name,
+              position: results.length + 1
+            });
+          }
+        });
+      }
 
       return results.slice(0, 10);
     } catch (error) {
