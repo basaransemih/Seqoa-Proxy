@@ -88,10 +88,46 @@ app.get('/api/health', (req, res) => {
 app.get('/api/status', async (req, res) => {
   try {
     const systemStatus = await statusService.getSystemStatus();
-    res.json({
-      ...systemStatus,
-      timestamp: new Date().toISOString()
-    });
+    
+    // Format the response as detailed JSON with widgets data
+    const response = {
+      timestamp: new Date().toISOString(),
+      system: {
+        overall: systemStatus.overall,
+        totalRequests: systemStatus.totalRequests,
+        averageResponseTime: Math.round(systemStatus.averageResponseTime),
+        uptime: systemStatus.uptime,
+        uptimeFormatted: formatUptime(systemStatus.uptime),
+        lastUpdate: systemStatus.lastUpdate
+      },
+      health: {
+        healthy: systemStatus.engines.filter(e => e.status === 'healthy').length,
+        degraded: systemStatus.engines.filter(e => e.status === 'degraded').length,
+        offline: systemStatus.engines.filter(e => e.status === 'offline').length,
+        total: systemStatus.engines.length
+      },
+      performance: {
+        fastest: getFastestEngine(systemStatus.engines),
+        slowest: getSlowestEngine(systemStatus.engines),
+        successRate: calculateSuccessRate(systemStatus.engines),
+        errorRate: calculateErrorRate(systemStatus.engines)
+      },
+      engines: systemStatus.engines.map(engine => ({
+        name: engine.name,
+        status: engine.status,
+        responseTime: engine.responseTime,
+        responseTimeFormatted: `${engine.responseTime}ms`,
+        lastCheck: engine.lastCheck,
+        uptime: engine.uptime,
+        uptimeFormatted: `${engine.uptime.toFixed(1)}%`,
+        errorCount: engine.errorCount,
+        successCount: engine.successCount,
+        recentResults: engine.recentResults,
+        totalRequests: engine.successCount + engine.errorCount
+      }))
+    };
+    
+    res.json(response);
   } catch (error) {
     console.error('Status error:', error);
     res.status(500).json({
@@ -100,6 +136,45 @@ app.get('/api/status', async (req, res) => {
     });
   }
 });
+
+// Helper functions for formatting
+function formatUptime(ms: number): string {
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days}d ${hours % 24}h`;
+  if (hours > 0) return `${hours}h ${minutes % 60}m`;
+  if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+  return `${seconds}s`;
+}
+
+function getFastestEngine(engines: any[]): any {
+  if (engines.length === 0) return null;
+  return engines.reduce((fastest, current) => 
+    current.responseTime < fastest.responseTime ? current : fastest
+  );
+}
+
+function getSlowestEngine(engines: any[]): any {
+  if (engines.length === 0) return null;
+  return engines.reduce((slowest, current) => 
+    current.responseTime > slowest.responseTime ? current : slowest
+  );
+}
+
+function calculateSuccessRate(engines: any[]): number {
+  const totalSuccess = engines.reduce((sum, e) => sum + e.successCount, 0);
+  const totalRequests = engines.reduce((sum, e) => sum + e.successCount + e.errorCount, 0);
+  return totalRequests > 0 ? Math.round((totalSuccess / totalRequests) * 100 * 10) / 10 : 0;
+}
+
+function calculateErrorRate(engines: any[]): number {
+  const totalError = engines.reduce((sum, e) => sum + e.errorCount, 0);
+  const totalRequests = engines.reduce((sum, e) => sum + e.successCount + e.errorCount, 0);
+  return totalRequests > 0 ? Math.round((totalError / totalRequests) * 100 * 10) / 10 : 0;
+}
 
 app.get('/api/status/:engine', async (req, res) => {
   try {
@@ -147,21 +222,52 @@ app.get('/', (req, res) => {
       '/api/search': 'Search across multiple engines',
       '/api/engines': 'List available search engines',
       '/api/health': 'Health check',
-      '/api/status': 'System status dashboard',
+      '/api/status': 'System status dashboard (JSON format)',
       '/api/status/:engine': 'Individual engine status',
       '/api/status/:engine/history': 'Engine status history'
-    },
-    pages: {
-      '/status.html': 'Status dashboard UI',
-      '/': 'API documentation'
     },
     usage: {
       search: '/api/search?q=your+query',
       selective: '/api/search?q=your+query&engines=Brave%20Search,DuckDuckGo%20HTML',
       limited: '/api/search?q=your+query&limit=20',
       status: '/api/status',
-      engineStatus: '/api/status/Brave%20Search',
-      dashboard: '/status.html'
+      engineStatus: '/api/status/Brave%20Search'
+    },
+    statusResponse: {
+      description: 'Detailed status information in JSON format',
+      structure: {
+        timestamp: 'ISO timestamp',
+        system: {
+          overall: 'healthy|degraded|offline',
+          totalRequests: 'number',
+          averageResponseTime: 'milliseconds',
+          uptime: 'milliseconds',
+          uptimeFormatted: 'human readable'
+        },
+        health: {
+          healthy: 'count',
+          degraded: 'count', 
+          offline: 'count',
+          total: 'count'
+        },
+        performance: {
+          fastest: 'engine object',
+          slowest: 'engine object',
+          successRate: 'percentage',
+          errorRate: 'percentage'
+        },
+        engines: [
+          {
+            name: 'engine name',
+            status: 'healthy|degraded|offline',
+            responseTime: 'milliseconds',
+            uptime: 'percentage',
+            errorCount: 'number',
+            successCount: 'number',
+            recentResults: 'number'
+          }
+        ]
+      }
     }
   });
 });
@@ -170,7 +276,7 @@ app.listen(port, () => {
   console.log(`🚀 Seqoa Meta Proxy running on port ${port}`);
   console.log(`📊 Available engines: ${metaSearch.getAvailableEngines().join(', ')}`);
   console.log(`🔗 Health check: http://localhost:${port}/api/health`);
-  console.log(`📈 Status dashboard: http://localhost:${port}/status.html`);
+  console.log(`📈 Status API: http://localhost:${port}/api/status`);
   console.log(`📖 API docs: http://localhost:${port}/`);
 });
 
