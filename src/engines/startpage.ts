@@ -1,6 +1,7 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { SearchEngine, SearchResult } from '../types';
+import { cleanHtml, cleanUrl, validateResult } from '../utils/html-cleaner';
 
 export class StartPageEngine implements SearchEngine {
   name = 'StartPage';
@@ -25,32 +26,40 @@ export class StartPageEngine implements SearchEngine {
       // Try different selectors for StartPage results
       const selectors = [
         '.w-gl__result',
+        '.w-gl__result[data-ns="web"]',
         '.search-result',
         '.result',
         '.web-result',
-        'div[class*="result"]'
+        'div[class*="result"]',
+        'article[data-ns="web"]'
       ];
 
       for (const selector of selectors) {
         $(selector).each((index: number, element: any) => {
+          if (results.length >= 25) return false;
+          
           const $result = $(element);
-          const title = $result.find('h3 a, .w-gl__result-title a, a[href*="http"]').first().text().trim();
-          const url = $result.find('h3 a, .w-gl__result-title a, a[href*="http"]').first().attr('href');
-          const snippet = $result.find('.w-gl__description, .description, .snippet, p').first().text().trim();
+          const titleElement = $result.find('h3 a, .w-gl__result-title a, a[href*="http"]').first();
+          const title = cleanHtml(titleElement.text());
+          const rawUrl = titleElement.attr('href');
+          const url = cleanUrl(rawUrl);
+          const snippet = cleanHtml($result.find('.w-gl__description, .description, .snippet, p').first().text());
 
-          if (title && url && snippet && url.startsWith('http')) {
+          if (validateResult(title, url, snippet)) {
             results.push({
               title,
-              url,
+              url: url!,
               snippet,
               engine: this.name,
               position: results.length + 1
             });
           }
         });
+        
+        if (results.length > 0) break;
       }
 
-      return results.slice(0, 10);
+      return results.slice(0, 25);
     } catch (error) {
       console.error(`StartPage search error:`, error);
       return [];

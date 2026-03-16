@@ -1,6 +1,7 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { SearchEngine, SearchResult } from '../types';
+import { cleanHtml, cleanUrl, validateResult } from '../utils/html-cleaner';
 
 export class DuckDuckGoEngine implements SearchEngine {
   name = 'DuckDuckGo';
@@ -23,15 +24,19 @@ export class DuckDuckGoEngine implements SearchEngine {
       const results: SearchResult[] = [];
 
       $('.result').each((index: number, element: any) => {
+        if (results.length >= 25) return false;
+        
         const $result = $(element);
-        const title = $result.find('h2 a').text().trim();
-        const url = $result.find('h2 a').attr('href');
-        const snippet = $result.find('.result__snippet').text().trim();
+        const titleElement = $result.find('h2 a').first();
+        const title = cleanHtml(titleElement.text());
+        const rawUrl = titleElement.attr('href');
+        const url = cleanUrl(rawUrl);
+        const snippet = cleanHtml($result.find('.result__snippet').first().text());
 
-        if (title && url && snippet && url.startsWith('http')) {
+        if (validateResult(title, url, snippet)) {
           results.push({
             title,
-            url,
+            url: url!,
             snippet,
             engine: this.name,
             position: results.length + 1
@@ -39,7 +44,7 @@ export class DuckDuckGoEngine implements SearchEngine {
         }
       });
 
-      return results.slice(0, 10);
+      return results.slice(0, 25);
     } catch (error) {
       console.error(`DuckDuckGo search error:`, error);
       return [];

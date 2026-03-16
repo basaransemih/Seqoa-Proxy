@@ -1,6 +1,7 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { SearchEngine, SearchResult } from '../types';
+import { cleanHtml, cleanUrl, validateResult } from '../utils/html-cleaner';
 
 export class MojeekEngine implements SearchEngine {
   name = 'Mojeek';
@@ -31,24 +32,30 @@ export class MojeekEngine implements SearchEngine {
 
       for (const selector of selectors) {
         $(selector).each((index: number, element: any) => {
+          if (results.length >= 25) return false;
+          
           const $result = $(element);
-          const title = $result.find('h2 a, .title a, h3 a, a[href*="http"]').first().text().trim();
-          const url = $result.find('h2 a, .title a, h3 a, a[href*="http"]').first().attr('href');
-          const snippet = $result.find('.s, .description, .snippet, p').first().text().trim();
+          const titleElement = $result.find('h2 a, .title a, h3 a, a[href*="http"]').first();
+          const title = cleanHtml(titleElement.text());
+          const rawUrl = titleElement.attr('href');
+          const url = cleanUrl(rawUrl);
+          const snippet = cleanHtml($result.find('.s, .description, .snippet, p').first().text());
 
-          if (title && url && snippet && url.startsWith('http')) {
+          if (validateResult(title, url, snippet)) {
             results.push({
               title,
-              url,
+              url: url!,
               snippet,
               engine: this.name,
               position: results.length + 1
             });
           }
         });
+        
+        if (results.length > 0) break;
       }
 
-      return results.slice(0, 10);
+      return results.slice(0, 25);
     } catch (error) {
       console.error(`Mojeek search error:`, error);
       return [];
