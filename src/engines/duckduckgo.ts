@@ -2,12 +2,13 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { SearchEngine, SearchResult } from '../types';
 
-export class GigablastEngine implements SearchEngine {
-  name = 'Gigablast';
+export class DuckDuckGoEngine implements SearchEngine {
+  name = 'DuckDuckGo';
 
   async search(query: string): Promise<SearchResult[]> {
     try {
-      const response = await axios.get(`https://gigablast.com/search?q=${encodeURIComponent(query)}`, {
+      const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+      const response = await axios.get(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -21,12 +22,11 @@ export class GigablastEngine implements SearchEngine {
       const $ = cheerio.load(response.data);
       const results: SearchResult[] = [];
 
-      // Gigablast has a very simple HTML structure from the 2000s
-      $('.result, .search-result, td[height="120"]').each((index: number, element: any) => {
+      $('.result').each((index: number, element: any) => {
         const $result = $(element);
-        const title = $result.find('a[href*="http"]').first().text().trim();
-        const url = $result.find('a[href*="http"]').first().attr('href');
-        const snippet = $result.text().replace(title, '').trim();
+        const title = $result.find('h2 a').text().trim();
+        const url = $result.find('h2 a').attr('href');
+        const snippet = $result.find('.result__snippet').text().trim();
 
         if (title && url && snippet && url.startsWith('http')) {
           results.push({
@@ -41,7 +41,7 @@ export class GigablastEngine implements SearchEngine {
 
       return results.slice(0, 10);
     } catch (error) {
-      console.error(`Gigablast search error:`, error);
+      console.error(`DuckDuckGo search error:`, error);
       return [];
     }
   }

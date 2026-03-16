@@ -1,23 +1,21 @@
 import { SearchEngine, SearchResult } from './types';
-import { BraveSearchEngine } from './engines/brave-search';
-import { DuckDuckGoHTMLEngine } from './engines/duckduckgo-html';
-import { MojeekEngine } from './engines/mojeek';
-import { MarginaliaEngine } from './engines/marginalia';
+import { DuckDuckGoEngine } from './engines/duckduckgo';
+import { BraveEngine } from './engines/brave';
+import { StartPageEngine } from './engines/startpage';
 import { QwantEngine } from './engines/qwant';
-import { YepEngine } from './engines/yep';
-import { GigablastEngine } from './engines/gigablast';
-import { SearXNGEngine } from './engines/searxng';
+import { MojeekEngine } from './engines/mojeek';
+import { AskEngine } from './engines/ask';
+import { MarginaliaEngine } from './engines/marginalia';
 
 export class MetaSearch {
   private engines: SearchEngine[] = [
-    new BraveSearchEngine(),
-    new DuckDuckGoHTMLEngine(),
-    new MojeekEngine(),
-    new MarginaliaEngine(),
+    new DuckDuckGoEngine(),
+    new BraveEngine(),
+    new StartPageEngine(),
     new QwantEngine(),
-    new YepEngine(),
-    new GigablastEngine(),
-    new SearXNGEngine()
+    new MojeekEngine(),
+    new AskEngine(),
+    new MarginaliaEngine()
   ];
 
   async searchAll(query: string, maxResults: number = 50): Promise<{

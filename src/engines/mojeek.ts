@@ -1,6 +1,6 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { SearchResult, SearchEngine } from '../types';
+import { SearchEngine, SearchResult } from '../types';
 
 export class MojeekEngine implements SearchEngine {
   name = 'Mojeek';
@@ -18,23 +18,21 @@ export class MojeekEngine implements SearchEngine {
       const $ = cheerio.load(response.data);
       const results: SearchResult[] = [];
 
-      '.result, .search-result'.split(',').forEach(selector => {
-        $(selector).each((index: number, element: any) => {
-          const $result = $(element);
-          const title = $result.find('h2 a, .title a').text().trim();
-          const url = $result.find('h2 a, .title a').attr('href');
-          const snippet = $result.find('.s, .description, .snippet').text().trim();
+      $('.result, .search-result').each((index: number, element: any) => {
+        const $result = $(element);
+        const title = $result.find('h2 a, .title a').text().trim();
+        const url = $result.find('h2 a, .title a').attr('href');
+        const snippet = $result.find('.s, .description, .snippet').text().trim();
 
-          if (title && url && snippet && url.startsWith('http')) {
-            results.push({
-              title,
-              url,
-              snippet,
-              engine: this.name,
-              position: results.length + 1
-            });
-          }
-        });
+        if (title && url && snippet && url.startsWith('http')) {
+          results.push({
+            title,
+            url,
+            snippet,
+            engine: this.name,
+            position: results.length + 1
+          });
+        }
       });
 
       return results.slice(0, 10);
